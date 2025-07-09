@@ -1,0 +1,29 @@
+---
+description: >-
+  Installation for macOS is the same as for iOS, however, there is one small
+  extra step.
+---
+
+# The Sandbox on macOS
+
+### The Sandbox on macOS
+
+{% hint style="info" %}
+You do _not_ need to perform any of these steps for an application running on _iOS_, or if your macOS application is _not sandboxed_.
+{% endhint %}
+
+Currently, use of ObjectBox from a sandboxed _macOS_ application requires you to set up at least one _App Group_ for ObjectBox to be able to open a database, in addition to whatever you would normally have done to gain access to the destination folder under the sandbox:
+
+1. Open your project in Xcode.
+2. Select the project icon at the very top of the _Project Navigator_.
+3. Select the _Signing & Capabilities_ tab where you turned on _App Sandbox_.
+4. Click the _+ Capability_ button and double-click _App Groups_.
+5. If the _App Groups_ list is empty, click the little "+" icon to add one.
+
+You should now see a list entry like `FGDTDLOBXDJ.$(TeamIdentifierPrefix)`. If you only see `$(TeamIdentifierPrefix)` , you still need to set up your team and code-signing under _General_.
+
+That should be it: ObjectBox will pick up the _App Group Identifier_ without any additional work.
+
+{% hint style="info" %}
+Pick a short group identifier. There's an internal limit in macOS of 31 characters for semaphores, that enforces the complete string (`FGDTDLOBXDJ.$(TeamIdentifierPrefix)` in the example) to be 20 characters or less.
+{% endhint %}

@@ -1,0 +1,115 @@
+---
+description: >-
+  The ObjectBox swift database manages the data model mostly automatically for
+  you. Enjoy the ease of automatic schema migrations and learn here what is left
+  to take care of.
+---
+
+# Data Model Updates
+
+## ObjectBox - Data Model Updates
+
+ObjectBox manages its data model (schema) mostly automatically. The data model is defined by the entity classes you define. When you **add or remove** entities or properties of your entities, **ObjectBox takes care** of those changes without any further action from you.
+
+For other changes like **renaming or changing the type**, ObjectBox needs **extra information** to make things unambiguous. This works using unique IDs (UIDs) and an `// objectbox: uid` annotation, as we will see below.
+
+## UIDs
+
+ObjectBox keeps track of entities and properties by assigning them unique IDs (UIDs). All those UIDs are stored in a file “model.json”, which you should add to your version control system (e.g. git). If you are interested, we have [in-depth documentation on UIDs and concepts](meta-model-ids-and-uids.md). But let’s continue with how to rename entities or properties.
+
+**In short:** To make UID-related changes, put an  `// objectbox: uid` annotation on the entity or property and build the project to get further instructions.
+
+## Renaming Entities and Properties
+
+So why do we need that UID annotation? If you simply rename an entity class, ObjectBox only sees that the old entity is gone and a new entity is available. This can be interpreted in two ways:
+
+* The old entity is removed and a new entity should be added, the old data is discarded. This is the **default behavior** of ObjectBox.
+* The entity was renamed, the old data should be re-used.
+
+So to tell ObjectBox to do a rename instead of discarding your old entity and data, you need to make sure it knows that this is the same entity and not a new one. You do that by attaching the internal UID to the entity.
+
+The same is true for properties.
+
+Now let’s walk through how to do that. The process works the same if you want to rename a property:
+
+## How-to and Example
+
+&#x20;**Step 1:** Add an empty `// objectbox: uid`  annotation to the entity/property you want to rename:
+
+```swift
+// objectbox: entity
+// objectbox: uid
+class MyName { ... }
+```
+
+&#x20;**Step 2:** Build the project. The build will fail with an error message that gives you the current UID of the entity/property:
+
+```
+error: No UID given for entity MyName. You can do the following:
+	[Rename] Apply the current UID using // objectbox: uid = 17664
+	[Change/Reset] Apply a new UID using // objectbox: uid = 18688
+
+```
+
+&#x20;**Step 3:** Apply the UID from the \[Rename] section of the error message to your entity/property:
+
+```swift
+// objectbox: entity
+// objectbox: uid = 17664
+class MyName { ... }
+```
+
+&#x20;**Step 4:** The last thing to do is the actual rename on the language level (Java, Kotlin, etc.):
+
+```java
+// objectbox: entity
+// objectbox: uid = 17664
+class MyNewName { ... }
+```
+
+&#x20;You can now use your renamed entity/property as expected and all existing data will still be there.
+
+{% hint style="info" %}
+&#x20;Note: Instead of the above you can also find the UID of the entity/property in the ObjectBox model.json file yourself and add it together with the `// objectbox: uid` annotation before renaming your entity/property.
+{% endhint %}
+
+## Changing Property Types
+
+When you want to change the type of a property, you must tell ObjectBox to create a new property internally. This is because ObjectBox cannot migrate your data, so simply changing the type may lead to data loss. You can do this in two ways:
+
+* Just rename the property, so it is treated as a new property (this only works if the property has no `// objectbox: uid` annotation already):
+
+```swift
+// old:
+var year: String
+// new:
+var yearInt: Int
+```
+
+* Tell ObjectBox to use a new UID for the property. Let’s walk through how to do that:
+
+#### How-to and Example
+
+**Step 1:** Add the  `// objectbox: uid` annotation to the property where you want to change the type:
+
+```swift
+// objectbox: uid
+var year: String
+```
+
+&#x20;**Step 2:** Build the project. The build will fail with an error message that gives you a newly created UID value:
+
+```
+error: No UID given for property year of entity MyName. You can do the following:
+	[Rename] Apply the current UID using // objectbox: uid = 15616
+	[Change/Reset] Apply a new UID using // objectbox: uid = 18688
+```
+
+&#x20;**Step 3:** Apply the UID from the \[Change/Reset] section to your property:
+
+```swift
+// objectbox: uid = 18688
+var year: Int
+```
+
+&#x20;You can now use the property in your entity as if it were a new one.
