@@ -1,0 +1,203 @@
+---
+description: >-
+  Persisting objects with Entity Annotations in your iOS Swift application is
+  easy with ObjectBox.
+---
+
+# Entity Annotations in ObjectBox
+
+## Database Persistence with Entity Annotations
+
+ObjectBox DB persists Swift objects. For a clear distinction, we sometimes call those persistable objects "**entities**". To let ObjectBox know which classes are entities you can either make them implement the `ObjectBox.Entity` protocol, or add annotations to them. Then ObjectBox can take care of your entities.
+
+Here is an example:
+
+```swift
+// objectbox: entity
+class User {
+    var id: Id = 0
+
+    var name: String
+
+    // objectbox: transient
+    private var tempUsageCount: Int // not persisted
+
+    // ...
+}
+```
+
+The **Entity** annotation identifies the Swift class `User` as a persistable entity. This will trigger ObjectBox to generate persistence code tailored for this class, even if it does not conform to the `Entity` protocol..
+
+{% hint style="info" %}
+**Note:** It’s often good practice to model entities as “dumb” data classes with just properties.
+{% endhint %}
+
+## Object IDs: id
+
+In ObjectBox, [every object has an ID of type Id ](getting-started.md#define-your-entities) to efficiently get or reference objects. Usually ObjectBox will just find that property in your entity based on its type and "do the right thing", but if you have several properties of the same `Id` type, or your ID uses the types `UInt64` or `Int64`, you can use an annotation to mark a particular property as _the_ ID of your entity:
+
+```swift
+class User: Entity {
+
+    // objectbox: id
+    var thisIsMyId: UInt64 = 0
+
+    // ...
+}
+```
+
+While we recommend to define your ID as type `Id` or `EntityId<MyEntity>`(where `MyEntity` would be replaced with the name of your class), you can also annotate a property of type `UInt64` or `Int64` as an ID.
+
+ObjectBox will usually manage ID values for you, but should you absolutely need to, you can tell ObjectBox that you want to assign IDs manually by yourself by adding an "assignable" parameter to the id annotation:
+
+```
+// objectbox: id = { "assignable": true }
+```
+
+If you do that, make sure that you assign a unique ID to each new object. If you assign the same ID to two objects of the same class, writing one to the database will overwrite the other. In general, it is best to let ObjectBox assign IDs. You are free to provide an additional indexed property to e.g. store a GUID for an object in addition to the ID used by ObjectBox, and to use queries to retrieve objects based on that GUID.
+
+### Ways to Define IDs
+
+To specify Entity IDs, you need to have a property of type `Id` . The code generator will look for one of these configurations, in the following order
+
+1. A property that has a `// objectbox: id` comment annotation on the line above the property definition.
+2. A property named `var id: Id`.
+3. Any other property of the `Id` type, if there is only one.
+
+You usually don't need more than one property of the `Id` type. Use ObjectBox's support for [object relations](relations.md) if you need to connect entities with each other. In any case, should you need to store a reference to another object for an unusual purpose, simply use annotations to ensure ObjectBox uses the right property as the entity's ID.
+
+Here's an example of using annotations in action:
+
+```swift
+// objectbox: entity
+class ExampleEntity {
+    var anotherID: Id = 0
+
+    // objectbox: id
+    var theEntityIdentifier: Id = 0 // <- this will be used
+    
+    required init() {
+        // nothing to do here
+    }
+}
+```
+
+{% hint style="info" %}
+ObjectBox supports several types for IDs. Apart from `Id`, you can also use the more type-safe `EntityId<ExampleEntity>` struct (where `ExampleEntity` is the class of your entity), which will let you ensure that you don't accidentally pass an ID of the wrong type into Box API.
+
+In addition, you can also use `UInt64` or `Int64` for your IDs, but for ObjectBox to know to use those, you _must_ annotate them.
+{% endhint %}
+
+## Using Different Names in the Database than in Swift
+
+```swift
+class User: Entity {
+    // objectbox: name = "USERNAME"
+    var name: String
+    ...
+}
+```
+
+The `name` annotation lets you define a name on the database level for a property. This allows you to rename the Swift field without affecting the property name on the database level. This is mostly useful in cross-platform code, where different platforms may have different conventions for property names and you need to exchange database files between them.
+
+{% hint style="info" %}
+**Note:** To rename properties and even entities you should [use Uid annotations](https://swift.objectbox.io/advanced/meta-model-ids-and-uids) instead.
+{% endhint %}
+
+## Transient Properties
+
+```swift
+class User: Entity {
+    // objectbox: transient
+    var tempUsageCount: Int
+    ...
+}
+```
+
+The `// objectbox: transient` annotation can be used to mark properties that should not be persisted, like the temporary counter above. As far as ObjectBox is concerned, transient properties simply do not exist. `static` properties are always ignored by ObjectBox and do not need to be marked as transient.
+
+## Property Indexes
+
+Annotate a property with `// objectbox: index` to create a database index for the corresponding database column. This can greatly improve performance when querying for that property.
+
+```swift
+// objectbox: index
+var name: String
+```
+
+{% hint style="warning" %}
+Index is currently not supported for `Data`, `Float`  and `Double`
+{% endhint %}
+
+An index stores additional information in the database to make lookups "faster", or more correctly, "more scalable". With an index, you will get results fast no matter if you store ten, one thousand, or one million objects in the database. Index based database lookups perform in O(log n).
+
+As an analogy we could look at how you store objects in an `Array<>`. For example you could store persons using an `Array<Person>`.  Now, you want to search for all persons with a specific name so you would iterate through the list and check for the name property of each object. This is an O(N) operation and thus does not scale well with an increasing number of objects.
+
+To make this more scalable you can introduce a second data structure `Dictionary<String, Person>` with the name as a key. This will give you a superfast lookup time (typically O(1)). The downside of this is that it needs more resources (here: RAM) and slows down add/remove operations on the list a bit. These principles can be transferred to database indexes, just that the primary resource consumed is disk space.
+
+### Index types (String)
+
+Because `String` properties typically take more space than scalar values, ObjectBox uses a **hash** for indexing strings by default. For any other type, the property **value** is used for all index look-ups.
+
+You can instruct ObjectBox to use a value-based index for a `String` property by specifying an index type:
+
+```swift
+// objectbox: index = value 
+var name: String
+```
+
+Keep in mind that for `String`, depending on the length of your values, a value-based index may require more storage space than the default hash-based index.
+
+ObjectBox supports these index types:
+
+* **Not specified** Uses best index based on property type (`hash` for `String`, `value` for others).
+* **value** Uses property values to build index. For `String,` this may require more storage than a hash-based index.
+* **hash** Uses 32-bit hashes of property values to build the index. Occasional collisions may occur which should not have any performance impact in practice. Usually a better choice than **hash64**, as it requires less storage.
+* **hash64** Uses 64-bit hashes of property values to build the index. Requires more storage than **hash** and thus should not be the first choice in most cases.
+
+{% hint style="info" %}
+**Limits of hash-based indexes:** Hashes work great for equality checks, but not for **"starts with"** type conditions. If you frequently use those, you should use value-based indexes instead.
+{% endhint %}
+
+### Vector Index for Nearest Neighbor Search <a href="#vector-index-for-nearest-neighbor-search" id="vector-index-for-nearest-neighbor-search"></a>
+
+To enable nearest neighbor search, a special index type for vector properties is available:
+
+{% embed url="https://docs.objectbox.io/on-device-vector-search" %}
+
+## Unique constraints
+
+Annotate a property with `unique` to enforce that values are unique before an entity is put:
+
+```swift
+// objectbox: unique
+var name: String
+```
+
+A `put()` operation will abort and throw an `ObjectBoxError.uniqueViolation` error:
+
+```swift
+do {
+    try box.put(User("Sam Flynn"))
+} catch ObjectBoxError.uniqueViolation(let message) {
+    // A user with that name already exists.
+}
+```
+
+{% hint style="info" %}
+Unique constraints are based on an index. You can further configure the index by adding an `index` annotation.
+{% endhint %}
+
+## Converting Enums and Custom Types
+
+You can add an `// objectbox: convert` annotation to properties with types that ObjectBox does not know to allow converting it into a recognized type. See [Enums and Custom Types](advanced/custom-types.md) for more.
+
+## Relations
+
+Creating to-one and to-many relations between objects is possible as well, and may require use of the `// objectbox: backlink` annotation, see the [Relations](relations.md) documentation for details.
+
+## Triggering generation
+
+You usually should not need to do anything special to trigger code generation once your entity classes are properly annotated. The `setup.rb` script should have automatically configured your project to run the code generator when you compile your project, for example using **Product > Build** in Xcode.
+
+Should you have unusual needs or encountering issues, see [Customizing Code Generation](advanced/sourcery.md) for a description of how things usually work.

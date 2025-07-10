@@ -1,0 +1,279 @@
+---
+description: >-
+  Entity relations are declared using wrapper types. Learn how to form to-one
+  and to-many relations with ObjectBox here.
+---
+
+# Relations
+
+Objects may reference other objects, for example using a simple reference or a list of objects. In database terms, we call those references **relations**. The object defining the relation we call the **source** object, the referenced object we call **target** object. So the relation has a direction.
+
+If there is one target object, we call the relation **to-one.** And if there can be multiple target objects, we call it **to-many**. Relations are lazily initialized: the actual target objects are fetched from the database when they are first accessed. Once the target objects are fetched, they are cached for further accesses.
+
+## To-One Relations
+
+![To-One Relation](.gitbook/assets/to-one-relations-2.png)
+
+You define a to-one relation using the `ToOne` class, a smart proxy to the target object. It gets and caches the target object transparently.&#x20;
+
+For example, an order is typically made by one customer. Thus, we could model the  `Order` class to have a to-one relation to the `Customer` like this:
+
+```swift
+class Customer: Entity {
+    var id: Id = 0
+    // ...
+}
+
+class Order: Entity {
+    var id: Id = 0
+    var customer: ToOne<Customer> = nil
+    // ...
+}
+```
+
+Given these entities and their to-one relation, you can create a relation and persist it:
+
+```swift
+let store = ...
+// Illustrate that initially, nothing did exist
+assert(try store.box(for: Customer.self).isEmpty())
+assert(try store.box(for: Order.self).isEmpty())
+
+let customer = Customer()
+let order = Order()
+order.customer.target = customer
+let orderId = try store.box(for: Order.self).put(order) // puts order and customer
+
+// Verify the `put` was called for the relation target as well
+assert(try store.box(for: Customer.self).count() == 1)
+assert(try store.box(for: Order.self).count() == 1)
+```
+
+{% hint style="info" %}
+You can persist whole trees of object relations at once: If the customer object does not yet exist in the database, the `ToOne` will `put()` it. If it already exists, the `ToOne` will only create the relation (but not `put()` it).
+{% endhint %}
+
+For a comprehensive documentation of its features, visit [the ToOne API docs](https://objectbox.io/docfiles/swift/current/Classes/ToOne.html).
+
+### Removing Relations
+
+You have to set the target of a relation to `nil` and persist the changed object(s) via `Box.put()`to remove a relation permanently. Which one you reset doesn't matter, though. You have these options:
+
+```swift
+anOrder.customer.target = nil
+// ... or ...
+anOrder.customer.targetId = nil
+// ... are both equivalent to:
+anOrder.customer = nil
+// ... whis is a short version of:
+anOrder.customer = ToOne<Customer>(target: nil)
+```
+
+{% hint style="info" %}
+Removing a relation never removes participating objects.
+{% endhint %}
+
+### `ToOne` is a Lazy Relation Proxy
+
+The target object of a relation is not eagerly loaded from the store; it is loaded lazily. Until you request the `ToOne.target`, it will not be read into main memory.
+
+## To-Many Relations
+
+To define a to-many relation, you can use a property of type `ToMany`. Like the ToOne class, the `ToMany`  class helps you to keep track of changes and to apply them to the database.
+
+Note that **to-many relations are resolved lazily** on first access, and then **cached** in the source entity inside the `ToMany` object. So subsequent calls to any method, like the `count` of the `ToMany`, do not query the database, even if the relation was changed elsewhere. To avoid the cache and trigger a fresh reload from the database, call `reset()` on the `ToMany`.
+
+There is a slight difference if you require a one-to-many (1:N) or many-to-many (N:M) relation. A 1:N relation is like the example above where a customer can have multiple orders, but an order is only associated with a single customer. An example for an N:M relation are students and teachers: students can have classes by several teachers but a teacher can also instruct several students.
+
+### One-to-Many Relations (1:N)
+
+<figure><img src=".gitbook/assets/one-to-many.png" alt="one-to-many relations"><figcaption><p>One-To-Many Relation</p></figcaption></figure>
+
+For every `ToOne` relation that you have, you can define a backlink. Backlinks are using the same relation information, but in the reverse direction. Thus, a backlink of a `ToOne` will result in a list of potentially multiple objects: all entities pointing to the same entity.\
+**Example:** Two Order objects point to the same Customer using a `ToOne`. The backlink is a `ToMany` from the Customer referencing its two Order objects.
+
+Let's extend the example from above to get the backlinks from `Customer` to `Order`:
+
+```swift
+class Customer: Entity {
+    var id: Id = 0
+    // objectbox: backlink = "customer"
+    var orders: ToMany<Order> = nil
+    // ...
+}
+
+class Order: Entity {
+    var id: Id = 0
+    var customer: ToOne<Customer> = nil
+    // ...
+}
+```
+
+Note you tell ObjectBox about your backlink using an `// objectbox: backlink = "name"` annotation (where _name_ is the name of the ToOne property that makes up the other end of the relation).
+
+Once the backlink is set up, you can traverse the relation in both directions:
+
+```swift
+// Store two new orders for a new customer
+let customer = Customer()
+let order1 = Order(customer: customer)
+let order2 = Order(customer: customer)
+try store.box(for: Order.self).put([order1, order2])
+
+// ID of customer was also set by put()
+assert(customer.id != 0)
+
+// Backlink: customer has two orders
+assert(try store.box(for: Customer.self).get(customer.id).orders.count() == 2)
+```
+
+{% hint style="info" %}
+In database terminology, you create a (bi-directional) **one-to-many (1:N) relationship** by defining a ToOne with a backlink ToMany.
+{% endhint %}
+
+### Collection Nature of `ToMany`
+
+`ToMany` conforms to Swift's `RandomAccessCollection` protocol. Thus, you can use it just like an array or similar collections and pass it around. And of course, you can create an Array if need be:
+
+```swift
+let orders = Array(customer.orders)
+```
+
+See also: [ToMany API docs](https://objectbox.io/docfiles/swift/current/Classes/ToMany.html)
+
+### Modifying One-to-Many Relations
+
+Apart from being a RandomAccessCollection, a `ToMany` relation is also a `RangeReplaceableCollection`. That means you can use `append(_:)` etc. on it just like on an `Array` to modify it. We've also added a `replace(_:)` method as a convenience to replace all entities referenced by the relation.
+
+Once you've performed all the modifications you want, call `applyToDb()` on the `ToMany` to actually cause them to be written to the database. Note that `ToMany` applies change tracking and thus only writes updated relations to the database.
+
+When you change its contents, `ToMany` will simply set the `ToOne` relation in the removed entities to `nil`, and will make added entities' `ToOne` point at the object containing the `ToMany` backlink. Note that, starting from version 1.4, you can add new (not yet persisted) objects, which `applyToDb()` will put automatically :
+
+```swift
+let newOrder = Order(summary: "Shoes")
+// try orderBox.put(newOrder) // ObjectBox Swift 1.4+ does not need this
+aCustomer.orders.replace([newOrder, oldOrder])
+try aCustomer.orders.applyToDb()
+```
+
+Also, modifying a `ToMany` backlink modifies the `ToOne` of the referenced entities (in this example, `newOrder` and `oldOrder`) and will `put()` those objects to actually write out the changed relation. To remove all references to an entity, you may pass an empty array to `replace()`:
+
+```swift
+// You cannot set `aCustomer.orders = nil`, so:
+aCustomer.orders.replace([])
+try aCustomer.orders.applyToDb()
+```
+
+{% hint style="info" %}
+Removing a relation never removes the referenced objects from the database.
+{% endhint %}
+
+### Many-to-Many (N:M)
+
+![Many-to-Many (N:M)](.gitbook/assets/many-to-many2.png)
+
+To define a many-to-many relation you simply add a property using the `ToMany` class. Assuming a _students and teachers_ example, this is how a simple `Student` class that has a to-many relation to `Teacher` entities can look like:
+
+```swift
+class Teacher: Entity {
+    var id: Id = 0
+    
+    ...
+}
+
+class Student: Entity {
+    var id: Id = 0
+    var ToMany<Teacher> teachers = nil
+    
+    ...
+}
+```
+
+**Adding** the teachers of a student works exactly like with an array, or a one-to-many relation:
+
+```swift
+let teacher1 = Teacher()
+let teacher2 = Teacher()
+
+let student1 = Student()
+let student2 = Student()
+
+// try store.box(for: Teacher.self).put([teacher1, teacher2])
+try store.box(for: Student.self).put([student1, student2])
+
+student1.teachers.append(teacher1)
+student1.teachers.append(teacher2)
+
+student2.teachers.append(teacher2)
+
+try student1.teachers.applyToDb()
+try student2.teachers.applyToDb()
+```
+
+To **get** the teachers of a student we just access the list:
+
+```swift
+var student1 = try boxStore.box(for: Student.self).get(student1.id)
+for (let teacher in student1.teachers) {
+    ...
+}
+```
+
+And if a student drops out of a class, we can **remove** a teacher:
+
+```swift
+student1.teachers.remove(at: 0)
+try student1.teachers.applyToDb()
+```
+
+{% hint style="info" %}
+Removing a relation never removes the referenced objects from the database.
+{% endhint %}
+
+#### Access Many-To-Many in the reverse direction
+
+Following the above example, you might want an easy way to find out what students a teacher has. Instead of having to perform a query, you can just add a to-many relation to the teacher and annotate it with the `// objectbox: backlink` annotation:
+
+```swift
+class Teacher: Entity {
+    var id: Id = 0
+    // objectbox: backlink = "teachers"
+    var students: ToMany<Student> = nil
+    ...
+}
+
+class Student: Entity {
+    var id: Id = 0
+    var teachers: ToMany<Teacher> = nil
+    
+    ...
+}
+```
+
+This will tell ObjectBox that there is only one relation, `teachers`, and that `students` is just a reverse-lookup of this relation. In any other respect, a many-to-many backlink can be used just like its forward counterpart.
+
+## Relations in Queries
+
+You can [traverse relations in queries](queries.md#building-queries-traversing-relations).
+
+## Example: Modelling Tree Relations
+
+You can model a tree relation with a to-one and a to-many relation pointing to itself:
+
+```swift
+class TreeNode: Entity {
+    var id: Id = 0
+    
+    var parent: ToOne<TreeNode> = nil
+    
+    // objectbox: backlink = "parent"
+    var children: ToMany<TreeNode> = nil
+}
+```
+
+The generated entity lets you navigate its parent and children:
+
+```swift
+let parent = entity.parent.target
+let children = Array(entity.children)
+```

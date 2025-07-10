@@ -1,0 +1,256 @@
+---
+description: >-
+  ObjectBox is a NoSQL Swift object database for iOS providing high-performance
+  on mobile devices. It is an easy-to-use Core Data alternative.
+---
+
+# ObjectBox Swift Database Docs
+
+Welcome to the official documentation for ObjectBox Swift. Here's what you need for your first steps:
+
+{% content-ref url="install.md" %}
+[install.md](install.md)
+{% endcontent-ref %}
+
+{% content-ref url="getting-started.md" %}
+[getting-started.md](getting-started.md)
+{% endcontent-ref %}
+
+Your opinion matters to us! To make ObjectBox better for our users, we have set up an [Anonymous Feedback Form](https://forms.gle/bdktGBUmL4m48ruj7). Please do fill this in (it only takes 2 minutes). Every response is highly appreciated. To rate this documentation, you can use the "Was this page helpful?" smiley at the end of each page.
+
+Otherwise, feel free to open an[ issue on GitHub](https://github.com/objectbox/objectbox-swift/issues) or send us your comments to contact\[at]objectbox.io - Thank you! - and if you like what you see, we also appreciate a shoutout :)
+
+## ObjectBox Change Log
+
+**For the latest changes see the** [**GitHub releases**](https://github.com/objectbox/objectbox-swift/releases)**.**
+
+## **Old releases**
+
+### 1.9.2 - 2023-11-14
+
+* Built with Xcode 15.0.1 and Swift 5.9.
+* Update to [ObjectBox C API 0.21.0](https://github.com/objectbox/objectbox-c/releases/tag/v0.21.0).
+* Include debug symbols for the ObjectBox Swift library.
+
+### 1.9.1 - 2023-11-21
+
+* Built with Xcode 15.0.1 and Swift 5.9.
+* Fix incorrect flags getting generated in the model JSON for to-one properties.
+* setup.rb: Changed configured build phase for ObjectBox generator to always run to remove warning due to no build phase inputs being configured (as the script can not know which source code files contain entities).
+* Require at least iOS 12.0 and macOS 10.15.
+
+### 1.9.0 - 2023-09-19
+
+* Built with Xcode 14.3.1 and Swift 5.8.1 (Xcode 14.3.1 or higher recommended)
+* Update to [ObjectBox C API 0.19.0](https://github.com/objectbox/objectbox-c/releases/tag/v0.19.0)
+  * Queries: all expected results are now returned when using a less-than or less-or-equal condition for a String property with index type `VALUE`. Reported via [objectbox-dart#318](https://github.com/objectbox/objectbox-dart/issues/318)
+  * Queries: when combining multiple conditions with OR and adding a condition on a related entity ("link condition") the combined conditions are now properly applied. Reported via [objectbox-dart#546](https://github.com/objectbox/objectbox-dart/issues/546)
+
+### 1.8.1 - 2023-01-30
+
+Highly recommended bugfix release; please update.
+
+* Build with Xcode 14.2 and Swift 5.7.2 (Xcode 14.2 or higher recommended)
+* Fixes "Could not put (-30786)", which may occur in some corner cases on some  OSes (ARM based).
+
+### 1.8.0 - 2022-12-13
+
+* Build with Xcode 14.1 and Swift 5.7.1 (Xcode 14.1 or higher recommended)
+* Many internal improvements (see [C API](https://cpp.objectbox.io/#latest-versions-changelogs) versions 0.16 to 0.18)
+* Note: the targeted macOS version was increased from 10.10 to 10.13. Alternatively, you can use version 1.8.1-rc for a podspec targeting 10.11 (still linked for 10.13).
+* (Data) Sync only: protocol updates improving efficiency. Reach out via your existing contact to check if any actions are required for your setup.
+
+### 1.7.0 - 2022-02-22
+
+* Unique properties can now be annotated to replace objects "on conflict" (e.g. useful for a secondary key).
+* Attaching to previously opened stores (using just the directory path)
+* DateNano type (a date stored with nanosecond precision; default is milliseconds)
+* Build with Xcode 13.2.1 and Swift 5.5\
+  Note: **requires Xcode 13.1** or later
+* Many internal improvements (see [C API](https://cpp.objectbox.io/#latest-versions-changelogs) 0.15 and 0.15.2)
+* Prepared new "flex" and "id-companion" annotations (at this point for compatibility only)
+
+### 1.6.0 - 2021-05-13
+
+* Experimental Swift Package Manager (SPM) support; **added 2021-06-02**
+* Build with Xcode 12.5 and Swift 5.4
+* Updated Sync protocol to V3
+* Internal improvements
+
+### 1.5.0 - 2021-05-03
+
+* Added support for Apple Silicon (e.g. M1 ARM64-based CPU)
+* Switched packaging to XCFramework (note: this will help us with SwiftPM in the future, but currently breaks Carthage consumers)
+* Several updates to the Sync API
+* Several internal improvements
+* Built with Swift 5.3.2
+
+### 1.4.1 - 2020-11-10
+
+* Several internal improvements under the hood; an indirect consequence is that `Foundation` is not implicitly imported anymore (you may have to add Foundation imports after upgrading)
+* New `sync` annotation
+* Build target for macOS set to 10.10 (was undefined before)
+* Built with Swift 5.3
+
+### 1.4.0 - 2020-09-08
+
+See also: [announcement post covering object relations](https://objectbox.io/objectbox-swift-1-4-in-relation-to/)
+
+* ToMany improvements
+  * `applyToDb()` now puts new objects automatically; you do not have to put them individually anymore
+  * New properties to probe the state: `resolved` and `canInteractWithDb`
+  * A throwing `resolveFromDb()` to explicitly fetch the target objects allowing to catch errors before starting to interact with the target objects
+  * `getUncachedFromDb()` and `getUncachedIdsFromDb()` for getting plain arrays from the database
+  * Fixes: e.g. resolving now happens transactionally (improves performance too), `removeAll()` is now supported
+* ToOne: putting an object with a ToOne, now avoids to put already persisted related ToOne target object. **Note:** While this is a fix, it may be a breaking change if you relied on that behavior before.
+* Box: added a bulk `get()` for given IDs and renamed `dictionaryWithEntities()` to `getAsDictionary()`
+* Read-only stores
+* Added a version check to ensure that the library matches the generator
+* Reduced framework size by omitting outdated 32 bit versions
+
+### 1.3.1 - 2020-06-29
+
+* Fixes for ToMany
+* Several internal improvements, e.g. query links are resolved faster
+
+### 1.3.0 - 2020-05-11
+
+* Built with and for Swift 5.2
+* Fix sporadic "errno 12" while opening a DB on iOS devices
+* Lower deployment target to iOS 9.3 (seems to be still used by older iPads)
+* Fix for PropertyQuery (e.g. single line construction without holding on to Query)
+* API clean ups
+  * Remove deprecated Query.all(); use find() instead
+  * Box functions like visit(), for() and forEach() are now read-only by default. New optional writable flags changes this to use a write transaction instead.
+
+### 1.2.0 - 2019-12-17
+
+* Added support for optional unsigned property types
+* Better type support for queries; e.g. unsigned and optional properties, Bool properties
+* Property queries compute sums and averages more precisely (improved algorithms and wider types)
+* Some Query API clean up, e.g. setting query parameters does not throw anymore, findUnique() always returns an optional result, etc.
+
+### 1.1.1 - 2019-11-23
+
+Fix for the 1.1 "realpath" error during build on machines without Homebrew coreutils.
+
+### 1.1 - 2019-11-18
+
+* Experimental Carthage support (in addition to CocoaPods)
+* If a `convert` annotation on an enum has no explicit database type given, its `RawType` is used.
+* Various performance optimizations
+* Usability improvements, e.g.`setup.rb` now asks which project to use if there is more than one, and creates a non-empty `*.generated.swift` file to help with code completion.
+* Added `put()` with variable argument list, `put(inout)` for mutable structs, and `putAndReturnIDs()`. Upgrade note: `put()` itself no longer returns IDs.
+* Added variants of Box methods for `ContiguousArray` class, which are faster than the methods using standard arrays.
+* Anonymous build [statistics](advanced/sourcery.md#anonymous-statistics) can be turned off using `--no-statistics`
+
+### 1.0.1 - 2019-10-01
+
+* Fix bug that prevented code generator from working in projects that use SwiftPM
+
+### 1.0 - 2019-09-24
+
+* Relations in queries
+* Observer callbacks for data changes
+* Many-to-many relations
+* Asynchronous put/remove
+* Edit relations through their backlinks
+* API clean up; e.g. renames, simple IDs, simplifications, etc.
+* If you've been using pre-releases, you can find migration instructions in the [Readme on Github](https://github.com/objectbox/objectbox-swift/blob/master/README.md).
+
+### 0.9.1 - 2019-08-13
+
+**iOS hotfix**
+
+* Fixed "Storage error code 78" for iOS
+
+### 0.9.0 - 2019-07-22
+
+**Open Source Release**
+
+* Source code for the Swift binding is now available
+* Reduced write/update time by about 25%
+* Rewrote the remaining Objective-C classes in Swift
+* Fix an issue reading an old entity written before a new, non-optional property was added to it
+* Improvements for people using SwiftLint in their projects
+* Added `findIds()`, `visit()`/`forEach()`. Added `remove()` for queries.&#x20;
+* Improved support for `enum`s and other user-defined types
+* `Data` and `[UInt8]` are now supported as property types.
+* Binaries: Swift 5 ABI only
+
+### 0.8.0 - 2019-05-14
+
+**Struct Support and Performance Improvements**
+
+* Immutable [structs can now be used](getting-started.md#put-with-structs), you are no longer restricted to classes
+* We no longer throw `NSError`-based errors, they're all `enum ObjectBoxError` cases now
+* Strings that were created as `NSStrings` previously are now created as Swift `String`s, which should reduce the number of unnecessary UTF-16/UTF-8 roundtrip conversions when Swift 5.1 arrives
+* New projects are now set up with separate generated source files for each target by `setup.rb`.
+* Binaries: Swift 5 ABI only
+
+### 0.7.0 - 2019-04-02
+
+**Swift 5 and Build Improvements**
+
+* Binaries: Swift 5 ABI only
+* ObjectBox setup script can now also be [used without CocoaPods](install.md#manual-setup)
+* ObjectBox can now be [used in frameworks](advanced/sourcery.md#passing-options-to-the-code-generator)
+
+### 0.6.0 - 2018-12-19
+
+**Model Migration**
+
+* Your data model is now [migrated transparently for you](advanced/data-model-updates.md) when you make changes
+* Properties can be [indexed](entity-annotations.md#property-indexes-with-index)
+* You can require property fields to be [unique](entity-annotations.md#unique-constraints)
+* You can specify a [different name for use in the model](entity-annotations.md#basic-annotations-for-entity-properties) than the instance variable's
+* Use of [ObjectBox without CocoaPods](advanced/sourcery.md) has been simplified
+* You do not need to annotate back-links in relations anymore in clear cases
+* Binaries: Swift 4 ABI only.
+* **Alpha users:**
+  * Use annotations `// objectbox:` instead of `// sourcery:`
+  * Delete any database files you created before\
+    (one time only, starting with the beta we have model migrations)
+
+### 0.5.5 - 2018-11-29
+
+**Alpha 6**
+
+* Remove code-generator limitations regarding order of properties vs. relations
+* Support sandboxed macOS applications ([see macOS Sandbox setup](https://swift.objectbox.io/install#the-sandbox-on-macos))
+* Add "transient" annotation for skipping properties
+* Binaries: Swift 4 ABI only.
+
+### 0.5.4 - 2018-11-27
+
+**Alpha 5**
+
+* Code generation fixes for optionals
+* Expanded example app to demo optionals
+* Fixes for Date-decoding into entities
+* Binaries: Swift 4 ABI only
+
+### 0.5.3 - 2018-11-26
+
+**Cleanup**
+
+* Just small things. Also an elephant.
+
+### 0.5.2 - 2018-11-22
+
+**iOS Sandboxing.**
+
+* Fixed issues that could occur when deploying to device.
+* Added auto-registration of your entities
+
+### 0.5.1 - 2018-11-19
+
+**Alpha 2**
+
+* Fix an issue related to "duplicate index ID" error message.
+
+### 0.5.0 - 2018-11-16
+
+**Alpha 1**
+
+* Initial public release for comment.
