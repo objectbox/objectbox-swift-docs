@@ -1,0 +1,301 @@
+---
+title: "Queries in ObjectBox Swift"
+description: "The ObjectBox Swift database supports building Queries using a query builder. Learn all about Query syntax and how to get to entities and their property valu..."
+keywords:
+  - objectbox
+  - swift
+  - ios
+  - macos
+  - xcode
+  - database
+---
+
+
+import Tabs from "@theme/Tabs"
+import TabItem from "@theme/TabItem"
+
+
+
+
+import { TechnicalArticleSchema } from '@site/src/components/Schema';
+
+<TechnicalArticleSchema
+  headline="Queries in ObjectBox Swift"
+  description="The ObjectBox Swift database supports building Queries using a query builder. Learn all about Query syntax and how to get to entities and their property valu..."
+  url="https://swift.objectbox.io/queries"
+  datePublished="2025-07-15"
+  dateModified="2025-07-15"
+/>
+
+# Queries
+
+The ObjectBox Swift database supports building Queries using a query builder. Learn all about Query syntax and how to get to entities and their property values by filtering for specific criteria.
+
+
+## Building Queries that Return Entities
+
+Beyond simple "fetch all" commands, like `personBox.all()`, you may want to filter entities by their properties. ObjectBox's query syntax should be familiar to every Swift developer, because queries are written in Swift:
+
+```swift
+let query: Query<Person> = try personBox.query {
+    Person.name.startsWith("Andrea")
+}.build()
+let allAndreas: [Person] = try query.find()
+```
+
+You simply write your class name, the property name, and then an operator, or a method name (like `startsWith()` here). While most of these calls look like the regular Swift calls you're used to, they are actually provided by ObjectBox's code generator, so not all methods you would e.g. find on a `String` are available for queries. See below for available operations.
+
+:::info
+Store query objects for re-use to increase performance.&#x20;
+
+You can call `Query.find()`, `Query.count()`, and all the other operations that execute a query multiple times. In performance-critical situations, building a new query object thousands of times can easily become costly.
+:::
+
+## Query Syntax
+
+### Combine Conditions with logical Operators and Parentheses
+
+Query conditions can be combined by the use of the logical operators `&&` and `||`.
+
+```swift
+let query: Query<Person> = try personBox.query {
+    Person.firstName.startsWith("Ste") 
+        && Person.lastName.startsWith("Jo")
+}.build()
+let maybeSteveJobs = try query.find()
+```
+
+Since these are overloads of native Swift operators, their standard operator precedence rules apply (`&& > ||`). You can use parentheses to group conditions and affect the truth condition of the whole expression.&#x20;
+
+That's fancy talk for: group condition parts by wrapping them in parens.
+
+```swift
+let query: Query<Person> = try personBox.query {
+    (Person.firstName.contains("Santa") || Person.age > 100)
+        && Person.lastName.isEqual(to: "Claus", caseSensitive: true) 
+}.build()
+let oldClauses = try query.find()
+```
+
+### QueryCondition Operators
+
+ObjectBox also provides operators for the most common operations. Please note that the property comes first:
+
+* **Collection containment**: `∈`and `∉` ; for example, disallowing teens entry to your disco: `Person.age ∉ (10..<18)`
+* **Equality**: `==` and `!=`, as in `Person.firstName == "Steve"`
+* **Comparison**: `<` and `>`, as in `CocoaPod.rating > 4.5`
+
+:::info
+Those operators are available for optional types, which currently lack the long form.&#x20;
+:::
+
+There are no custom operators for conditions like `Property<T, String>.startsWith()`, as their names are already much more familiar to Swift developers.
+
+### Query Operations
+
+Once you have a query set up properly, you can execute it as often as you want to get the latest results of its evaluation. These are the most common operations:
+
+* `Query.find()` will return all results that match
+* `Query.count()` will return the count of all results that match
+* `Query.findUnique()` will return an unique match from the result set; returns nil if no result was found and throws if the result is not unique
+
+Please refer to the [Query API docs](https://objectbox.io/docfiles/swift/current/Classes/Query.html) for a comprehensive list of permitted operations.
+
+### Sorting
+
+In addition to specifying conditions you can order the returned results using the `ordered()` method:
+
+```java
+let query = try userBox.query { User.firstName == "Joe" }
+                .ordered(by: User.lastName) // in ascending order, ignoring case
+                .build()
+```
+
+You can also pass flags to `ordered(by:,flags:)` to sort in descending order, to sort case sensitively or to treat null values specially . For example, to sort the above results in descending order and case sensitively instead:
+
+```java
+let query = try userBox.query { User.firstName == "Joe" }
+                .ordered(by: User.lastName, flags: [.descending, .caseSensitive])
+                .build()
+```
+
+Order conditions can also be chained. Check the [method documentation](https://objectbox.io/docfiles/swift/current/Classes/QueryBuilder.html) for details.
+
+## Modifying Conditions Later
+
+You can modify conditions after creation of the query. That can be useful if your base query stays the same but one small part changes between `find()` executions and you don't want to create a new Query object every time.
+
+To do that, you use the query's `setParameter()` methods. Refer to the [Query API docs](https://objectbox.io/docfiles/swift/current/Classes/Query.html) for a comprenhesive list of permitted `setParameter()` variants.
+
+### setParameter Changes the Condition Value
+
+There are many useful variants of the `Query.setParameter()` and `Query.setParameters()` method. (Note the plural _s._) The first version will set the comparison value of a condition that matches to a new value. The second version does the same for comparisons with two values, hence the plural _s_.&#x20;
+
+For example:
+
+* `query.setParameter(Person.age, to: 18)` for a query you built using `personBox.query { Person.age == 21 }.build()` will effectively change the condition to `Person.age == 18`
+* `query.setParameters(Person.age, to: 10, and: 18)` for a query you built using `personBox.query { Person.age.isBetween(0, and: 99) }.build()` will effectively change the condition to `Person.age.isBetween(10, and: 18)`
+
+:::warning
+You will get fatal errors if you try to call the plural-_s_-Version when the original condition only has one comparison value, and vice versa. Also note that this is an usage error and thus does not throw.
+:::
+
+### Use PropertyAlias to Disambiguate Conditions
+
+One problem of the property-based approach above is that you have no control what happens when there are two or more conditions on the same property:
+
+```swift
+let query = try personBox.query {
+    Person.age > 10 
+        && Person.age < 50
+}.build()
+query.setParameter(Person.age, to: 25) // did this affect "<" or ">" ?
+```
+
+To resolve this ambiguity, you can register a short name (called an _alias_) for a query condition. That's a simple string to give the condition a name.
+
+We use a variant of the definition operator (`.=`) for this:
+
+```swift
+let query = try personBox.query {
+    "MinAge" .= Person.age > 10 
+        && "MaxAge" .= Person.age < 50
+}.build()
+query.setParameter("MinAge", to: 25)
+```
+
+There is, of course, also a plural _s_-variant for conditions with two values. The same warning as above applies: make sure not to mix up the plural and singular versions.
+
+A downside of the string-based alias approach is that you lose type information: you have to make sure not to pass a `Double` to a setter for a condition that operates on `String`, for example.
+
+## Building Queries that Operate on Properties
+
+In addition to filtering entities, you can also build queries for their properties. These are aggregate functions like `max`, `min`, `average`, `count`, but also various find methods. These are available on the `PropertyQuery` type, that you can get from a regular query like this:
+
+```swift
+let query: Query<Person> = try personBox.query { Person.firstName.startsWith("S") }.build()
+let agePropertyQuery: PropertyQuery<Person, Int> = query.property(Person.age)
+```
+
+The `PropertyQuery` will respect all conditions of its original `Query`. So in the example above, only entities with a `firstName` that starts with "S" will be regarded. Use the empty block variant `personBox.query()` if you want to operate on all entities.
+
+Please refer to [the PropertyQuery API docs](https://objectbox.io/docfiles/swift/current/Classes/PropertyQuery.html) for an exhaustive list of operations.
+
+:::warning
+Currently, property queries do not honor the `ordered(by:,flags:)` setting. If you need a fixed order for your proerty query results, you must sort them manually _after_ retrieving them.
+:::
+
+### Aggregate Functions
+
+A simple aggregate function is to request the maximum, minimum, or average value of a given property.
+
+```swift
+let query: Query<Person> = try personBox.query().build()
+let agePropertyQuery: PropertyQuery<Person, Int> = query.property(Person.age)
+let maxAge: Int = try agePropertyQuery.max()
+let minAge: Int = try agePropertyQuery.min()
+let averageAge: Double = try agePropertyQuery.average()
+```
+
+Number-based operations are only available for number-based properties and not for strings, for example. Also note that the average of a property is always a floating point number, even if the property is an `Int` (what would you do with a non-fractional average anyway?).
+
+### Fetching all Property Values
+
+In addition to aggregate functions, you can also use "find" methods. These will return any or all of the values of entities matching the query:
+
+```swift
+let query: Query<Person> = try personBox.query { Person.firstName == "Steve" }.build()
+let steveLastNamePQ: PropertyQuery<Person, String> = query.property(Person.lastName)
+let allOfStevesLastNames: [String] = try steveLastNamePQ.findStrings()
+// if allOfStevesLastNames.contains("Jobs") { ... }
+```
+
+While the possibilities are not literally endless, they are plentiful if you combine query conditions with property-based requests.&#x20;
+
+### Distinct and Unique Results
+
+The property query can also only return distinct values, not producing duplicates. That means if you have 5 people in your database with ages `[25, 30, 30, 40, 40]`, you will get `[25, 30, 40]` as a distinct result set.
+
+For example:
+
+```swift
+let names: [String] = try personBox.query().build()
+    .property(Person.firstName)
+    .distinct(caseSensitiveCompare: false)
+    .findStrings()
+```
+
+If only a single value is expected to be returned the query can be configured to throw if that is not the case:
+
+```swift
+do {
+    let singleNameResult: String = try personBox.query { Person.age > 999 }.build()
+        .property(Person.firstName)
+        .findUniqueString()
+} catch ObjectBoxError.uniqueViolation(let message) {
+    print("Found more than one item! \(message)")
+}
+guard let singleNameResult = singleNameResult else {
+    fatalError("No result found at all.")
+}
+```
+
+You can combine `distinct()` with `findUnique()` .
+
+## Building Queries Traversing Relations
+
+If your entity contains a relation to other entities, you can apply additional criteria to the related entities by using the `link(_ property:, conditions:)` method on your query.
+
+E.g. if you had an entity `Order` that has a property `ToOne<Order, Customer>` pointing to the customer that placed the order, you could select all orders belonging to a particular customer from today's orders using
+
+```swift
+let sallysOrders = try orderBox.query{
+        Order.date.isAfter(thisMorning)
+    }.link(Order.customer) {
+        Customer.name == "Sally Sparrow"
+    }.build().find()
+```
+
+This is equivalent to what other databases call a `join`.
+
+## How do queries work?
+
+Let's assume we have this interesting Entity:
+
+```swift
+class Person: Entity {
+    var id: Id = 0
+    var firstName: String
+    var lastName: String
+    var age: Int
+
+    init(firstName: String, lastName: String, age: Int) {
+        self.firstName = firstName
+        self.lastName = lastName
+        self.age = age
+    }
+
+    // ... 
+}
+```
+
+For this entity, the code generator will create something like this:
+
+```swift
+extension Person {
+    static var id: Property<Person, Id, Void> { /* ... */ }
+    static var firstName: Property<Person, String, Void> { /* ... */ }
+    static var lastName: Property<Person, String, Void> { /* ... */ }
+    static var age: Property<Person, Int, Void> { /* ... */ }
+}
+```
+
+That's your entity property metadata. The code generator will create these static properties for you with the same name as a stored object's properties. This is what you use for queries.
+
+The associated types of the generic `Property<Entity, Value, ReferencedType>` itself encode so much interesting information already to make the query interface very intuitive, for example:&#x20;
+
+* `Property<E, String, R>` exposes methods that make sense for strings, like `contains`
+* `Property<E, Int, R>` exposes methods that make sense for numbers, including comparisons
+* `Property<E, Date, R>` exposes methods for dates, like `isBetween(_:and:)`
+
+All of these factory methods create a `QueryCondition`, the type used for queries, and a lot of them have intuitive operator variants. Please refer to [the API docs](https://objectbox.io/docfiles/swift/current/Structs/Property.html) for a full list of operators and methods.
