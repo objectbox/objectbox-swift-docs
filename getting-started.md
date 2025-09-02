@@ -68,17 +68,30 @@ The generator requires write permissions in your project directory to generate t
 
 #### To run the generator from Xcode
 
-1. right-click your project in the Project navigator and click **ObjectBoxGeneratorCommand**,
-2. select the target that contains your ObjectBox entity classes,
-3. when asked, allow the command to change files.
-4. Once the command has finished, add the generated source file (`generated/EntityInfo-<target-name>.generated.swift`) to your project.
+1. Right-click your project in the Project navigator and click **ObjectBoxGeneratorCommand**,
+2. Select the target that contains your ObjectBox entity classes. The generator plugin sends anonymous usage statistics to the ObjectBox team. If you wish to opt-out, collapse the **Arguments** section below the list of targets and add the `--no-statistics` argument there.
+3. When asked, allow the command to change files.
+4. When asked, allow the command to open network connections to send anonymous usage statistics to the ObjectBox team. You need to provide the permission even if you had opt-out of the usage statistics.
+5. Once the command has finished, add the generated source file (`generated/EntityInfo-<target-name>.generated.swift`) to your project.
 
 #### To run the generator from the command line
 
 Use this command:
 
 ```shell
-swift package plugin --allow-writing-to-package-directory objectbox-generator
+swift package plugin --allow-writing-to-package-directory --allow-network-connections all objectbox-generator --target <target-name>
+```
+
+The generator plugin sends anonymous usage statistics to the ObjectBox team. If you wish to opt-out, pass the `--no-statistics` flag to the generator,
+
+```shell
+swift package plugin --allow-writing-to-package-directory --allow-network-connections all objectbox-generator --target <target-name> --no-statistics
+```
+
+The available targets can be viewed in the `Package.swift` file or with the following command,
+
+```shell
+swift package describe
 ```
 
 ### Review and keep generated files
