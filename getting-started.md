@@ -194,9 +194,9 @@ try exampleEntityBox.removeAll()
 assert(try exampleEntityBox.count() == 0)
 ```
 
-### Put with structs
+### Put with Structs
 
-Structs basically work the same way as classes. However, since structs are value types, ObjectBox can only adjust their ID if you pass them by reference. So if you have a mutable struct, remember to pass it by reference:
+Using put with **mutable structs** works a little different as they are [value types](https://www.swift.org/documentation/articles/value-and-reference-types.html). Make sure to place an ampersand (&) directly before a structs variable name when you pass it to `put`, to pass it by reference and allow the `put` function to update the object ID (otherwise the `put` function will receive a copy of the struct):
 
 ```swift
 // objectbox: entity
@@ -220,7 +220,7 @@ Alternately, you can manually update the struct's ID field by using `putAndRetur
 exampleEntity.id = exampleEntityBox.putAndReturnID(exampleEntity)
 ```
 
-Given immutable structs are such a common occurrence, ObjectBox generates a convenience method for you to help with updating the ID on an immutable struct, `put(struct:)`, which will automatically create a new copy of your struct with the ID filled out:
+To help work with **immutable structs**, ObjectBox generates a convenience method for you to help with updating the ID on an immutable struct, `put(struct:)`, which will automatically create a new copy of your struct with the ID filled out:
 
 ```swift
 // objectbox: entity
@@ -239,7 +239,7 @@ let newEntity = try exampleEntityBox.put(struct: exampleEntity)
 assert(newEntity.id != 0)
 ```
 
-Note that, after writing `exampleEntity`, you _must_ use `newEntity` from then on. If you called `put(struct:)` or `put()` on exampleEntity again, ObjectBox would not know that this object has already been saved, and would write a second copy of it to the database.
+Note that, after writing `exampleEntity`, you _must_ use `newEntity` from then on. If you called `put(struct:)` or `put()` on `exampleEntity` again, ObjectBox would not know that this object has already been saved, and would write a second copy of it to the database.
 
 But what if you know you already saved an immutable entity, and you already made a copy because you changed one of its fields, and don't need another copy? Then you can call `put()`, just like above:
 
@@ -252,7 +252,7 @@ let futureExampleEntity = Author(id: newEntity.id, name: newEntity:name,
 try exampleEntityBox.put(futureExampleEntity)
 ```
 
-So beyond having to use a special call the first time you write out an entity, everything is the same as with classes.
+When using **relations,** be aware that **after inserting an Object with `put` its ToOne and ToMany fields can't be updated**. To update a ToOne or ToMany relation always get a fresh copy of the Object from its Box. See the [section on structs](relations.md#using-relations-with-structs) in the Relations documentation.
 
 {% hint style="info" %}
 For ObjectBox to work with structs, there needs to be an `init()` method on your struct that accepts all its persisted properties. In the above example, the default initializer provided for the struct by Swift does just fine, but if you have properties that are not persisted, or you are defining your own initializer, you may also have to provide that initializer.

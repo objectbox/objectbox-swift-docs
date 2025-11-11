@@ -70,6 +70,10 @@ anOrder.customer = ToOne<Customer>(target: nil)
 ```
 
 {% hint style="info" %}
+When using structs, to update a ToOne, make sure to get a fresh copy of the Object from its Box, like `box.get(order.id)`. See the section about [Using Relations with Structs](relations.md#using-relations-with-structs).
+{% endhint %}
+
+{% hint style="info" %}
 Removing a relation never removes participating objects.
 {% endhint %}
 
@@ -156,6 +160,10 @@ aCustomer.orders.replace([newOrder, oldOrder])
 try aCustomer.orders.applyToDb()
 ```
 
+{% hint style="info" %}
+When using structs, to update a ToMany, make sure to get a fresh copy of the Object from its Box, like `box.get(aCustomer.id)`. See the section about [Using Relations with Structs](relations.md#using-relations-with-structs).
+{% endhint %}
+
 Also, modifying a `ToMany` backlink modifies the `ToOne` of the referenced entities (in this example, `newOrder` and `oldOrder`) and will `put()` those objects to actually write out the changed relation. To remove all references to an entity, you may pass an empty array to `replace()`:
 
 ```swift
@@ -227,6 +235,10 @@ try student1.teachers.applyToDb()
 ```
 
 {% hint style="info" %}
+When using structs, to update a ToMany, make sure to get a fresh copy of the Object from its Box, like `box.get(student1.id)`. See the section about [Using Relations with Structs](relations.md#using-relations-with-structs).
+{% endhint %}
+
+{% hint style="info" %}
 Removing a relation never removes the referenced objects from the database.
 {% endhint %}
 
@@ -251,6 +263,19 @@ class Student: Entity {
 ```
 
 This will tell ObjectBox that there is only one relation, `teachers`, and that `students` is just a reverse-lookup of this relation. In any other respect, a many-to-many backlink can be used just like its forward counterpart.
+
+## Using Relations with Structs
+
+When using structs, be aware that **after inserting an Object with `put` its ToOne and ToMany fields can't be updated**. To update a ToOne or ToMany relation always get a fresh copy of the Object from its Box:
+
+```swift
+// Insert a student
+try box.put(&student)
+// To update its ToMany (applies to ToOne as well), get a fresh copy
+let updatableStudent = try box.get(student.id)
+updatableStudent.teachers.append(teacher)
+try updatableStudent.teachers.applyToDb()
+```
 
 ## Relations in Queries
 
