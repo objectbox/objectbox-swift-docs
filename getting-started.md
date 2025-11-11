@@ -9,7 +9,7 @@ description: >-
 
 ## Add ObjectBox to your project
 
-See [**Install ObjectBox**](install.md) if you haven't already. This guide assumes ObjectBox was added using CocoaPods.
+See the [instructions in the README](https://github.com/objectbox/objectbox-swift?tab=readme-ov-file#add-objectbox-to-your-project) file of the objectbox-swift repository.
 
 ## Define Entity Classes
 
@@ -90,13 +90,11 @@ swift package describe
 
 #### Generator statistics
 
-The generator sends anonymous usage statistics to help the ObjectBox team improve ObjectBox and its generator. 
-If you wish to opt out, pass the `--no-statistics` flag to the generator.
-In Xcode, this is done in the **Arguments** section below the list of targets.
+The generator sends anonymous usage statistics to help the ObjectBox team improve ObjectBox and its generator. If you wish to opt out, pass the `--no-statistics` flag to the generator. In Xcode, this is done in the **Arguments** section below the list of targets.
 
 ### Review and keep generated files
 
-Among other files ObjectBox generates a JSON **model file**, by default to `model-<target-name>.json` where  `<target-name>` is the name of an Xcode target, e.g. `NotesExample-iOS`.
+Among other files ObjectBox generates a JSON **model file**, by default to `model-<target-name>.json` where `<target-name>` is the name of an Xcode target, e.g. `NotesExample-iOS`.
 
 {% hint style="info" %}
 The JSON file is not visible by default in the Xcode Project navigator, you have to add it to the project or view it in Finder.
@@ -266,10 +264,10 @@ Note that for structs you will usually not want to specify a default value of 0 
 
 Transactions in ObjectBox let you group together several operations and ensure that either all of them complete, or none does, always leaving your data relations in a consistent state. If you do not run your own transaction, ObjectBox will implicitly create one for every call:
 
-* A `put`  runs an implicit transaction.
-* Prefer the `put`  variant that takes an array of entities (like `put([person1, person2])`) whenever possible to increase performance.
+* A `put` runs an implicit transaction.
+* Prefer the `put` variant that takes an array of entities (like `put([person1, person2])`) whenever possible to increase performance.
 
-For a high number of interactions inside loops, consider wrapping the loop in explicit transactions. `Store` exposes methods like  `runInTransaction` for this purpose.
+For a high number of interactions inside loops, consider wrapping the loop in explicit transactions. `Store` exposes methods like `runInTransaction` for this purpose.
 
 ```swift
 // Bad/slow, each Put runs inside a new transaction

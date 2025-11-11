@@ -6,11 +6,7 @@ description: >-
 
 # ObjectBox Swift Database Docs
 
-Welcome to the official documentation for ObjectBox Swift. Here's what you need for your first steps:
-
-{% content-ref url="install.md" %}
-[install.md](install.md)
-{% endcontent-ref %}
+Welcome to the official documentation for the ObjectBox Swift SDK. To get started right away go to:
 
 {% content-ref url="getting-started.md" %}
 [getting-started.md](getting-started.md)
@@ -18,11 +14,11 @@ Welcome to the official documentation for ObjectBox Swift. Here's what you need 
 
 Your opinion matters to us! To make ObjectBox better for our users, we have set up an [Anonymous Feedback Form](https://forms.gle/bdktGBUmL4m48ruj7). Please do fill this in (it only takes 2 minutes). Every response is highly appreciated. To rate this documentation, you can use the "Was this page helpful?" smiley at the end of each page.
 
-Otherwise, feel free to open an[ issue on GitHub](https://github.com/objectbox/objectbox-swift/issues) or send us your comments to contact\[at]objectbox.io - Thank you! - and if you like what you see, we also appreciate a shoutout :)
+Otherwise, feel free to open an[ issue on GitHub](https://github.com/objectbox/objectbox-swift/issues) or send us your comments to contact\[at]objectbox.io - Thank you! - and if you like what you see, we also appreciate a shout-out :)
 
-## ObjectBox Change Log
+## ObjectBox Swift Changelog
 
-**For the latest changes see the** [**GitHub releases**](https://github.com/objectbox/objectbox-swift/releases)**.**
+**For the latest changes** [**see the CHANGELOG file**](https://github.com/objectbox/objectbox-swift/blob/main/CHANGELOG.md) in the objectbox-swift repositor&#x79;**.**
 
 ## **Old releases**
 
