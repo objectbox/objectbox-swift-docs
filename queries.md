@@ -64,7 +64,7 @@ ObjectBox also provides operators for the most common operations. Please note th
 Those operators are available for optional types, which currently lack the long form.&#x20;
 {% endhint %}
 
-There are no custom operators for conditions like `Property<T, String>.startsWith()`, as their names are already much more familiar to Swift developers.
+There are no custom operators for conditions like `Property<E, String, R>.startsWith()`, as their names are already much more familiar to Swift developers.
 
 ### Query Operations
 
@@ -72,7 +72,7 @@ Once you have a query set up properly, you can execute it as often as you want t
 
 * `Query.find()` will return all results that match
 * `Query.count()` will return the count of all results that match
-* `Query.findUnique()` will return an unique match from the result set; returns nil if no result was found and throws if the result is not unique
+* `Query.findUnique()` will return a unique match from the result set; returns nil if no result was found and throws if the result is not unique
 
 Please refer to the [Query API docs](https://objectbox.io/docfiles/swift/current/Classes/Query.html) for a comprehensive list of permitted operations.
 
@@ -80,15 +80,15 @@ Please refer to the [Query API docs](https://objectbox.io/docfiles/swift/current
 
 In addition to specifying conditions you can order the returned results using the `ordered()` method:
 
-```java
+```swift
 let query = try userBox.query { User.firstName == "Joe" }
                 .ordered(by: User.lastName) // in ascending order, ignoring case
                 .build()
 ```
 
-You can also pass flags to `ordered(by:,flags:)` to sort in descending order, to sort case sensitively or to treat null values specially . For example, to sort the above results in descending order and case sensitively instead:
+You can also pass flags to `ordered(by:,flags:)` to sort in descending order, to sort case sensitively or to treat null values specially. For example, to sort the above results in descending order and case sensitively instead:
 
-```java
+```swift
 let query = try userBox.query { User.firstName == "Joe" }
                 .ordered(by: User.lastName, flags: [.descending, .caseSensitive])
                 .build()
@@ -100,7 +100,7 @@ Order conditions can also be chained. Check the [method documentation](https://o
 
 You can modify conditions after creation of the query. That can be useful if your base query stays the same but one small part changes between `find()` executions and you don't want to create a new Query object every time.
 
-To do that, you use the query's `setParameter()` methods. Refer to the [Query API docs](https://objectbox.io/docfiles/swift/current/Classes/Query.html) for a comprenhesive list of permitted `setParameter()` variants.
+To do that, you use the query's `setParameter()` methods. Refer to the [Query API docs](https://objectbox.io/docfiles/swift/current/Classes/Query.html) for a comprehensive list of permitted `setParameter()` variants.
 
 ### setParameter Changes the Condition Value
 
@@ -109,10 +109,10 @@ There are many useful variants of the `Query.setParameter()` and `Query.setParam
 For example:
 
 * `query.setParameter(Person.age, to: 18)` for a query you built using `personBox.query { Person.age == 21 }.build()` will effectively change the condition to `Person.age == 18`
-* `query.setParameters(Person.age, to: 10, and: 18)` for a query you built using `personBox.query { Person.age.isBetween(0, and: 99) }.build()` will effectively change the condition to `Person.age.isBetween(10, and: 18)`
+* `query.setParameters(Person.age, to: 10, 18)` for a query you built using `personBox.query { Person.age.isBetween(0, and: 99) }.build()` will effectively change the condition to `Person.age.isBetween(10, and: 18)`
 
 {% hint style="warning" %}
-You will get fatal errors if you try to call the plural-_s_-Version when the original condition only has one comparison value, and vice versa. Also note that this is an usage error and thus does not throw.
+You will get fatal errors if you try to call the plural-_s_-version when the original condition only has one comparison value, and vice versa. Also note that this is a usage error and thus does not throw.
 {% endhint %}
 
 ### Use PropertyAlias to Disambiguate Conditions
@@ -157,7 +157,7 @@ The `PropertyQuery` will respect all conditions of its original `Query`. So in t
 Please refer to [the PropertyQuery API docs](https://objectbox.io/docfiles/swift/current/Classes/PropertyQuery.html) for an exhaustive list of operations.
 
 {% hint style="warning" %}
-Currently, property queries do not honor the `ordered(by:,flags:)` setting. If you need a fixed order for your proerty query results, you must sort them manually _after_ retrieving them.
+Currently, property queries do not honor the `ordered(by:,flags:)` setting. If you need a fixed order for your property query results, you must sort them manually _after_ retrieving them.
 {% endhint %}
 
 ### Aggregate Functions
@@ -200,7 +200,7 @@ let names: [String] = try personBox.query().build()
     .findStrings()
 ```
 
-If only a single value is expected to be returned the query can be configured to throw if that is not the case:
+If only a single value is expected to be returned, the query can be configured to throw if that is not the case:
 
 ```swift
 do {
@@ -215,11 +215,11 @@ guard let singleNameResult = singleNameResult else {
 }
 ```
 
-You can combine `distinct()` with `findUnique()` .
+You can combine `distinct()` with the `findUnique*()` methods (e.g. `findUniqueString()`).
 
 ## Building Queries Traversing Relations
 
-If your entity contains a relation to other entities, you can apply additional criteria to the related entities by using the `link(_ property:, conditions:)` method on your query.
+If your entity contains a relation to other entities, you can apply additional criteria to the related entities by using the `link(_:,conditions:)` method on your query builder.
 
 E.g. if you had an entity `Order` that has a property `ToOne<Order, Customer>` pointing to the customer that placed the order, you could select all orders belonging to a particular customer from today's orders using
 
